@@ -19,12 +19,12 @@
   :root {
     --bg: #f6f3ee; --card: #ffffff; --ink: #1f2a24; --muted: #6b746e;
     --line: #e4ded4; --accent: #2f6b4f; --accent-ink: #ffffff; --soft: #e7f0ea; --danger: #b3412f;
-    --daan: #2f6b4f; --marie: #a0522d; --eline: #3b5b92;
+    --daan: #2f6b4f; --marie: #a0522d; --eline: #3b5b92; --kris: #7a4a8c;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg:#141816; --card:#1d2320; --ink:#eef1ee; --muted:#9aa49e; --line:#2c3430;
       --accent:#6fbf94; --accent-ink:#0e1411; --soft:#22302a; --danger:#e07b67;
-      --daan:#6fbf94; --marie:#e0a07a; --eline:#8fb0e6; }
+      --daan:#6fbf94; --marie:#e0a07a; --eline:#8fb0e6; --kris:#c49ad6; }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--ink);
@@ -102,7 +102,7 @@
     .top, .admin-actions, .clear, .no-print { display: none !important; }
     .print-head { display: block; margin-bottom: 10pt; }
     .print-head h1 { font-size: 20pt; margin: 0; }
-    .overview { columns: 3; column-gap: 10mm; }
+    .overview { columns: 2; column-gap: 10mm; }
     .overview .kot { break-inside: avoid; border: 1px solid #999; border-radius: 6px; background: #fff; }
     .overview .kot li { border-color: #ddd; }
     .box { border-color: #000; }
@@ -171,7 +171,8 @@
   const KOTS = [
     { id: 'daan',  naam: 'Daan',         kleur: 'var(--daan)',  init: 'D' },
     { id: 'marie', naam: 'Marie & Roan', kleur: 'var(--marie)', init: 'M' },
-    { id: 'eline', naam: 'Eline & Owen', kleur: 'var(--eline)', init: 'E' }
+    { id: 'eline', naam: 'Eline & Owen', kleur: 'var(--eline)', init: 'E' },
+    { id: 'kris',  naam: 'Kris & Evelyne', kleur: 'var(--kris)', init: 'K' }
   ];
   const $ = id => document.getElementById(id);
   const state = { kot: null, code: '', items: [], mode: 'kot', pin: '' };
