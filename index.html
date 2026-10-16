@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Boodschappen">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f6f3ee">
+<title>Boodschappen kot</title>
+<style>
+  /* ====== Plak hieronder de URL van je Google-script (zie handleiding) ====== */
+</style>
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxd-anRYCc6HfqjLJmdduDd8usFwOgRQF_k-01HphpgAaOMNJeihyoudkOac3m5crv2xg/exec';
+</script>
+<style>
+  :root {
+    --bg: #f6f3ee; --card: #ffffff; --ink: #1f2a24; --muted: #6b746e;
+    --line: #e4ded4; --accent: #2f6b4f; --accent-ink: #ffffff; --soft: #e7f0ea; --danger: #b3412f;
+    --daan: #2f6b4f; --marie: #a0522d; --eline: #3b5b92;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#141816; --card:#1d2320; --ink:#eef1ee; --muted:#9aa49e; --line:#2c3430;
+      --accent:#6fbf94; --accent-ink:#0e1411; --soft:#22302a; --danger:#e07b67;
+      --daan:#6fbf94; --marie:#e0a07a; --eline:#8fb0e6; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 520px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 32px); }
+  h1 { font-size: 30px; letter-spacing: -0.02em; margin: 8px 0 4px; }
+  h2 { font-size: 24px; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .hidden { display: none !important; }
+  button { font: inherit; border: 0; cursor: pointer; color: inherit; background: none; }
+
+  .who { display: grid; gap: 12px; }
+  .who button { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; font-size: 20px; font-weight: 600; }
+  .who button:active { transform: scale(0.985); }
+  .dot { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 18px; flex: none; }
+  .who small { display: block; font-weight: 400; font-size: 14px; color: var(--muted); }
+  .admin-link { margin-top: 36px; text-align: center; }
+  .admin-link button { color: var(--muted); font-size: 15px; text-decoration: underline; }
+
+  .top { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .back { width: 40px; height: 40px; border-radius: 50%; background: var(--card); border: 1px solid var(--line); font-size: 20px; flex: none; }
+
+  .pin-dots { display: flex; justify-content: center; gap: 16px; margin: 28px 0 10px; }
+  .pin-dots span { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--ink); }
+  .pin-dots span.on { background: var(--ink); }
+  .msg { text-align: center; min-height: 24px; color: var(--danger); font-size: 15px; }
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 300px; margin: 16px auto 0; }
+  .keypad button { aspect-ratio: 1.25; border-radius: 18px; background: var(--card); border: 1px solid var(--line); font-size: 26px; font-weight: 500; }
+  .keypad button:active { background: var(--soft); }
+  .keypad .ghost { background: none; border: 0; font-size: 16px; color: var(--muted); }
+
+  .add { display: flex; gap: 8px; margin-bottom: 16px; position: sticky; top: 0; background: var(--bg); padding: 8px 0; z-index: 2; }
+  .add input { flex: 1; min-width: 0; font: inherit; font-size: 17px; padding: 14px 16px; border-radius: 14px;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  .add input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+  .add button, .btn { background: var(--accent); color: var(--accent-ink); border-radius: 14px; padding: 0 20px; font-weight: 600; }
+  .btn { padding: 12px 18px; }
+  .btn.secondary { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+  .btn.danger { background: none; color: var(--danger); border: 1px solid var(--line); }
+
+  ul.items { list-style: none; padding: 0; margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  ul.items li { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-top: 1px solid var(--line); }
+  ul.items li:first-child { border-top: 0; }
+  ul.items li .t { flex: 1; word-break: break-word; }
+  ul.items li .del { width: 34px; height: 34px; border-radius: 50%; color: var(--muted); font-size: 20px; flex: none; }
+  ul.items li .del:active { background: var(--soft); color: var(--danger); }
+  .empty { text-align: center; color: var(--muted); padding: 36px 16px; background: var(--card); border: 1px dashed var(--line); border-radius: 18px; }
+  .status { color: var(--muted); font-size: 14px; text-align: center; margin: 12px 0; min-height: 20px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+  .row .btn { flex: 1; }
+
+  .sheet { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; margin-top: 16px; }
+  .sheet label { display: block; font-size: 15px; color: var(--muted); margin-bottom: 6px; }
+  .sheet input { width: 100%; font: inherit; font-size: 22px; letter-spacing: 0.3em; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink); margin-bottom: 12px; }
+
+  .overview .kot { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; margin-bottom: 14px; }
+  .overview .kot h3 { margin: 0 0 2px; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+  .overview .kot .when { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+  .overview .kot ol { margin: 0; padding-left: 0; list-style: none; }
+  .overview .kot li { padding: 6px 0; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+  .overview .kot li:first-child { border-top: 0; }
+  .box { width: 16px; height: 16px; border: 1.5px solid var(--muted); border-radius: 3px; flex: none; margin-top: 3px; }
+  .overview .kot .none { color: var(--muted); font-style: italic; }
+  .overview .clear { margin-top: 12px; font-size: 14px; padding: 8px 12px; }
+  .print-head { display: none; }
+
+  .setup { background: #fff4d6; color: #5a4300; border-radius: 14px; padding: 14px 16px; margin-bottom: 20px; font-size: 15px; }
+
+  @media print {
+    @page { margin: 14mm; }
+    html, body { background: #fff; color: #000; font-size: 12pt; }
+    main { max-width: none; padding: 0; }
+    .top, .admin-actions, .clear, .no-print { display: none !important; }
+    .print-head { display: block; margin-bottom: 10pt; }
+    .print-head h1 { font-size: 20pt; margin: 0; }
+    .overview { columns: 3; column-gap: 10mm; }
+    .overview .kot { break-inside: avoid; border: 1px solid #999; border-radius: 6px; background: #fff; }
+    .overview .kot li { border-color: #ddd; }
+    .box { border-color: #000; }
+    .dot { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- KIES WIE JE BENT -->
+  <section id="s-who">
+    <h1>Boodschappen 🛒</h1>
+    <p class="sub">Wie ben je?</p>
+    <div id="setup" class="setup hidden">De app is nog niet gekoppeld. Vul <b>API_URL</b> in bovenaan index.html (zie handleiding).</div>
+    <div class="who" id="who"></div>
+    <div class="admin-link"><button id="btn-admin">Overzicht voor de sponsor :-)</button></div>
+  </section>
+
+  <!-- CODE INGEVEN -->
+  <section id="s-pin" class="hidden">
+    <div class="top"><button class="back" data-back>‹</button><h2 id="pin-title">Code</h2></div>
+    <p class="sub" style="text-align:center;margin:0">Geef je code van 4 cijfers</p>
+    <div class="pin-dots" id="pin-dots"><span></span><span></span><span></span><span></span></div>
+    <div class="msg" id="pin-msg"></div>
+    <div class="keypad" id="keypad"></div>
+  </section>
+
+  <!-- LIJST VAN EEN STUDENT -->
+  <section id="s-list" class="hidden">
+    <div class="top"><button class="back" data-back>‹</button><h2 id="list-title"></h2></div>
+    <form class="add" id="add-form" autocomplete="off">
+      <input id="add-input" placeholder="Bv. 2 l melk" enterkeyhint="done" maxlength="120">
+      <button type="submit">Voeg toe</button>
+    </form>
+    <ul class="items" id="items"></ul>
+    <div class="empty hidden" id="empty">Je lijst is nog leeg.<br>Typ hierboven wat je nodig hebt.</div>
+    <div class="status" id="status"></div>
+    <div class="row">
+      <button class="btn secondary" id="btn-newcode">Code wijzigen</button>
+      <button class="btn secondary" data-back>Klaar</button>
+    </div>
+    <div class="sheet hidden" id="newcode-sheet">
+      <label for="newcode">Kies een nieuwe code (4 cijfers)</label>
+      <input id="newcode" inputmode="numeric" pattern="[0-9]*" maxlength="4">
+      <label for="newcode2">Nog eens ter controle</label>
+      <input id="newcode2" inputmode="numeric" pattern="[0-9]*" maxlength="4">
+      <div class="msg" id="newcode-msg" style="text-align:left"></div>
+      <button class="btn" id="btn-savecode" style="width:100%">Bewaar nieuwe code</button>
+    </div>
+  </section>
+
+  <!-- OVERZICHT VERHUURDER -->
+  <section id="s-admin" class="hidden">
+    <div class="top"><button class="back" data-back>‹</button><h2>Overzicht</h2></div>
+    <div class="print-head"><h1>Boodschappenlijst kot</h1><div id="print-date"></div></div>
+    <div class="admin-actions row" style="margin:0 0 16px">
+      <button class="btn" id="btn-print">🖨️ Afdrukken</button>
+      <button class="btn secondary" id="btn-refresh">Vernieuwen</button>
+    </div>
+    <div class="overview" id="overview"></div>
+  </section>
+
+</main>
+<script>
+  const KOTS = [
+    { id: 'daan',  naam: 'Daan',         kleur: 'var(--daan)',  init: 'D' },
+    { id: 'marie', naam: 'Marie & Roan', kleur: 'var(--marie)', init: 'M' },
+    { id: 'eline', naam: 'Eline & Owen', kleur: 'var(--eline)', init: 'E' }
+  ];
+  const $ = id => document.getElementById(id);
+  const state = { kot: null, code: '', items: [], mode: 'kot', pin: '' };
+
+  async function api(body) {
+    if (!/^https:\/\//.test(API_URL)) throw new Error('De app is nog niet gekoppeld (API_URL ontbreekt).');
+    const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.fout || 'Er ging iets mis');
+    return j;
+  }
+
+  function show(id) {
+    ['s-who', 's-pin', 's-list', 's-admin'].forEach(s => $(s).classList.toggle('hidden', s !== id));
+    window.scrollTo(0, 0);
+  }
+  function home() { state.kot = null; state.code = ''; state.items = []; $('newcode-sheet').classList.add('hidden'); show('s-who'); }
+  document.querySelectorAll('[data-back]').forEach(b => b.onclick = home);
+
+  // Startscherm
+  if (!/^https:\/\//.test(API_URL)) $('setup').classList.remove('hidden');
+  $('who').innerHTML = KOTS.map(k =>
+    `<button data-kot="${k.id}"><span class="dot" style="background:${k.kleur}">${k.init}</span><span>${k.naam}<small>Open mijn lijst</small></span></button>`
+  ).join('');
+  $('who').onclick = e => {
+    const b = e.target.closest('[data-kot]'); if (!b) return;
+    state.mode = 'kot'; state.kot = b.dataset.kot;
+    openPin(KOTS.find(k => k.id === state.kot).naam);
+  };
+  $('btn-admin').onclick = () => { state.mode = 'admin'; openPin('Sponsor'); };
+
+  // Codeklavier
+  $('keypad').innerHTML = [1,2,3,4,5,6,7,8,9].map(n => `<button data-n="${n}">${n}</button>`).join('')
+    + '<button class="ghost" data-n="c">Wis</button><button data-n="0">0</button><button class="ghost" data-n="b">⌫</button>';
+  function openPin(title) { state.pin = ''; $('pin-title').textContent = title; $('pin-msg').textContent = ''; dots(); show('s-pin'); }
+  function dots() { [...$('pin-dots').children].forEach((d, i) => d.classList.toggle('on', i < state.pin.length)); }
+  let busy = false;
+  $('keypad').onclick = e => {
+    const b = e.target.closest('[data-n]'); if (!b || busy) return;
+    const n = b.dataset.n;
+    if (n === 'c') state.pin = ''; else if (n === 'b') state.pin = state.pin.slice(0, -1);
+    else if (state.pin.length < 4) state.pin += n;
+    $('pin-msg').textContent = ''; dots();
+    if (state.pin.length === 4) submitPin();
+  };
+  document.addEventListener('keydown', e => {
+    if ($('s-pin').classList.contains('hidden')) return;
+    if (/^\d$/.test(e.key)) $('keypad').querySelector(`[data-n="${e.key}"]`).click();
+    if (e.key === 'Backspace') $('keypad').querySelector('[data-n="b"]').click();
+  });
+  async function submitPin() {
+    busy = true; $('pin-msg').style.color = 'var(--muted)'; $('pin-msg').textContent = 'Even kijken…';
+    try {
+      if (state.mode === 'admin') {
+        const j = await api({ actie: 'admin', code: state.pin });
+        state.code = state.pin; renderAdmin(j.lijsten); show('s-admin');
+      } else {
+        const j = await api({ actie: 'openen', kot: state.kot, code: state.pin });
+        state.code = state.pin; state.items = j.items; openList();
+      }
+    } catch (err) {
+      $('pin-msg').style.color = 'var(--danger)'; $('pin-msg').textContent = err.message;
+      state.pin = ''; dots();
+    } finally { busy = false; }
+  }
+
+  // Lijst van student
+  function openList() {
+    $('list-title').textContent = KOTS.find(k => k.id === state.kot).naam;
+    $('status').textContent = ''; renderItems(); show('s-list');
+  }
+  const MAG_WEG = 15 * 60 * 1000; // tikfout weghalen kan 15 minuten
+  function renderItems() {
+    const nu = Date.now();
+    $('items').innerHTML = state.items.map(it =>
+      `<li><span class="t"></span>${it.tijd && nu - it.tijd < MAG_WEG
+        ? `<button class="del" data-id="${it.id}" aria-label="Weghalen">✕</button>` : ''}</li>`).join('');
+    [...$('items').querySelectorAll('.t')].forEach((el, i) => el.textContent = state.items[i].t);
+    $('items').classList.toggle('hidden', !state.items.length);
+    $('empty').classList.toggle('hidden', !!state.items.length);
+  }
+  let queue = Promise.resolve();
+  function send(body) {
+    $('status').textContent = 'Bewaren…';
+    queue = queue.then(() => api(Object.assign({ kot: state.kot, code: state.code }, body))
+      .then(j => { state.items = j.items; renderItems(); $('status').textContent = '✓ Bewaard'; })
+      .catch(err => { $('status').textContent = '⚠️ ' + err.message; }));
+  }
+  $('add-form').onsubmit = e => {
+    e.preventDefault();
+    const v = $('add-input').value.trim(); if (!v) return;
+    $('add-input').value = '';
+    send({ actie: 'toevoegen', t: v });
+  };
+  $('items').onclick = e => {
+    const b = e.target.closest('.del'); if (!b) return;
+    b.disabled = true;
+    send({ actie: 'verwijderen', id: b.dataset.id });
+  };
+
+  // Code wijzigen
+  $('btn-newcode').onclick = () => {
+    $('newcode-sheet').classList.toggle('hidden'); $('newcode').value = ''; $('newcode2').value = ''; $('newcode-msg').textContent = '';
+  };
+  $('btn-savecode').onclick = async () => {
+    const a = $('newcode').value, b = $('newcode2').value, m = $('newcode-msg');
+    m.style.color = 'var(--danger)';
+    if (!/^\d{4}$/.test(a)) return m.textContent = 'Gebruik precies 4 cijfers.';
+    if (a !== b) return m.textContent = 'De twee codes zijn niet gelijk.';
+    try {
+      await api({ actie: 'codewijzigen', kot: state.kot, code: state.code, nieuw: a });
+      state.code = a; m.style.color = 'var(--accent)'; m.textContent = '✓ Nieuwe code bewaard. Onthoud ze goed!';
+    } catch (err) { m.textContent = err.message; }
+  };
+
+  // Overzicht sponsor
+  function fmt(iso) {
+    if (!iso) return 'Nog niets ingegeven';
+    return 'Laatst aangepast: ' + new Date(iso).toLocaleString('nl-BE', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+  function renderAdmin(lijsten) {
+    $('print-date').textContent = new Date().toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    $('overview').innerHTML = '';
+    KOTS.forEach(k => {
+      const l = lijsten[k.id] || { items: [] };
+      const div = document.createElement('div'); div.className = 'kot';
+      div.innerHTML = `<h3><span class="dot" style="background:${k.kleur};width:28px;height:28px;font-size:13px">${k.init}</span>${k.naam}</h3>
+        <div class="when">${fmt(l.gewijzigd)}</div><ol></ol>
+        ${l.items.length ? `<button class="btn danger clear" data-kot="${k.id}">Lijst leegmaken (gekocht)</button>` : ''}`;
+      const ol = div.querySelector('ol');
+      if (!l.items.length) ol.innerHTML = '<li class="none">Niets nodig</li>';
+      l.items.forEach(it => { const li = document.createElement('li'); li.innerHTML = '<span class="box"></span><span></span>'; li.lastChild.textContent = it.t; ol.appendChild(li); });
+      $('overview').appendChild(div);
+    });
+  }
+  $('overview').onclick = async e => {
+    const b = e.target.closest('.clear'); if (!b) return;
+    const naam = KOTS.find(k => k.id === b.dataset.kot).naam;
+    if (!confirm(`De lijst van ${naam} leegmaken? Doe dit pas als alles gekocht is.`)) return;
+    try { const j = await api({ actie: 'leegmaken', kot: b.dataset.kot, code: state.code }); renderAdmin(j.lijsten); }
+    catch (err) { alert(err.message); }
+  };
+  $('btn-refresh').onclick = async () => {
+    try { const j = await api({ actie: 'admin', code: state.code }); renderAdmin(j.lijsten); } catch (err) { alert(err.message); }
+  };
+  $('btn-print').onclick = () => window.print();
+</script>
+</body>
+</html>
