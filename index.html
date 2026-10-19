@@ -85,6 +85,14 @@
   ul.results .nm small { display: block; color: var(--muted); font-size: 13px; }
   ul.results .plus { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 20px; line-height: 34px; text-align: center; flex: none; }
   ul.results li.added .plus { background: var(--soft); color: var(--accent); }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; z-index: 50; padding: 16px; padding-bottom: calc(env(safe-area-inset-bottom) + 16px); }
+  .modal.hidden { display: none; }
+  .modal-card { background: var(--card); color: var(--ink); border-radius: 20px; padding: 20px; width: 100%; max-width: 480px; }
+  .modal-card h3 { margin: 0 0 8px; font-size: 20px; }
+  .bev-item { font-weight: 600; margin: 0 0 8px; padding: 10px 12px; background: var(--bg); border-radius: 10px; word-break: break-word; }
+  .bev-uitleg { color: var(--muted); font-size: 15px; margin: 0 0 12px; }
+  #bev-code { width: 100%; font: inherit; font-size: 24px; letter-spacing: .4em; text-align: center; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  .btn.danger-fill { background: var(--danger); color: #fff; }
   .mylist-title { font-size: 15px; color: var(--muted); font-weight: 600; margin: 8px 2px 8px; text-transform: uppercase; letter-spacing: .04em; }
   .overview .kot li .pr { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .overview .kot .tot { display: flex; justify-content: space-between; border-top: 2px solid var(--ink); margin-top: 4px; padding-top: 8px; font-weight: 700; }
@@ -185,6 +193,21 @@
     </div>
   </section>
 
+  <!-- BEVESTIGEN MET CODE -->
+  <div class="modal hidden" id="bevestig" role="dialog" aria-modal="true" aria-labelledby="bev-titel">
+    <form class="modal-card" id="bev-form" autocomplete="off">
+      <h3 id="bev-titel">Wil je dit echt schrappen?</h3>
+      <p class="bev-item" id="bev-item"></p>
+      <p class="bev-uitleg">Deze lijn staat er al langer dan 15 minuten. Geef je code in om ze te verwijderen.</p>
+      <input id="bev-code" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" aria-label="Je code">
+      <div class="msg" id="bev-msg"></div>
+      <div class="row" style="margin-top:8px">
+        <button type="button" class="btn secondary" id="bev-annuleer">Annuleren</button>
+        <button type="submit" class="btn danger-fill" id="bev-ok">Verwijderen</button>
+      </div>
+    </form>
+  </div>
+
   <!-- OVERZICHT VERHUURDER -->
   <section id="s-admin" class="hidden">
     <div class="top"><button class="back" data-back>‹</button><h2>Overzicht</h2></div>
@@ -280,8 +303,7 @@
   function renderItems() {
     const nu = Date.now();
     $('items').innerHTML = state.items.map(it =>
-      `<li><span class="t">${esc(it.t)}</span>${it.p ? `<span class="pr">${euro(it.p)}</span>` : ''}${it.tijd && nu - it.tijd < MAG_WEG
-        ? `<button class="del" data-id="${esc(it.id)}" aria-label="Weghalen">✕</button>` : ''}</li>`).join('');
+      `<li><span class="t">${esc(it.t)}</span>${it.p ? `<span class="pr">${euro(it.p)}</span>` : ''}<button class="del" data-id="${esc(it.id)}" data-oud="${it.tijd && nu - it.tijd < MAG_WEG ? '' : '1'}" aria-label="Weghalen">✕</button></li>`).join('');
     $('items').classList.toggle('hidden', !state.items.length);
     $('empty').classList.toggle('hidden', !!state.items.length);
   }
@@ -300,8 +322,35 @@
   };
   $('items').onclick = e => {
     const b = e.target.closest('.del'); if (!b) return;
-    b.disabled = true;
-    send({ actie: 'verwijderen', id: b.dataset.id });
+    const it = state.items.find(i => i.id === b.dataset.id); if (!it) return;
+    if (it.tijd && Date.now() - it.tijd < MAG_WEG) { b.disabled = true; send({ actie: 'verwijderen', id: it.id }); return; }
+    vraagBevestiging(it);
+  };
+
+  // Bevestigen met code voor lijnen ouder dan 15 minuten
+  let teVerwijderen = null;
+  function vraagBevestiging(it) {
+    teVerwijderen = it;
+    $('bev-item').textContent = it.t;
+    $('bev-code').value = ''; $('bev-msg').textContent = '';
+    $('bevestig').classList.remove('hidden');
+    setTimeout(() => $('bev-code').focus(), 50);
+  }
+  function sluitBevestiging() { $('bevestig').classList.add('hidden'); teVerwijderen = null; }
+  $('bev-annuleer').onclick = sluitBevestiging;
+  $('bevestig').onclick = e => { if (e.target === $('bevestig')) sluitBevestiging(); };
+  $('bev-form').onsubmit = async e => {
+    e.preventDefault();
+    const c = $('bev-code').value.trim();
+    if (!/^\d{4}$/.test(c)) { $('bev-msg').textContent = 'Geef je code van 4 cijfers.'; return; }
+    $('bev-ok').disabled = true; $('bev-msg').textContent = '';
+    try {
+      const j = await api({ actie: 'verwijderen', kot: state.kot, code: state.code, id: teVerwijderen.id, bevestiging: c });
+      state.items = j.items; renderItems(); $('status').textContent = '✓ Verwijderd';
+      sluitBevestiging();
+    } catch (err) {
+      $('bev-msg').textContent = err.message; $('bev-code').value = '';
+    } finally { $('bev-ok').disabled = false; }
   };
 
   // Tabbladen: zelf typen of zoeken bij Colruyt
