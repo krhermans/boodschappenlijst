@@ -13,7 +13,7 @@
   /* ====== Plak hieronder de URL van je Google-script (zie handleiding) ====== */
 </style>
 <script>
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxd-anRYCc6HfqjLJmdduDd8usFwOgRQF_k-01HphpgAaOMNJeihyoudkOac3m5crv2xg/exec';
+  const API_URL = 'PLAK_HIER_DE_URL_VAN_JE_GOOGLE_SCRIPT';
 </script>
 <style>
   :root {
@@ -72,6 +72,22 @@
   ul.items li .t { flex: 1; word-break: break-word; }
   ul.items li .del { width: 34px; height: 34px; border-radius: 50%; color: var(--muted); font-size: 20px; flex: none; }
   ul.items li .del:active { background: var(--soft); color: var(--danger); }
+  ul.items li .pr { color: var(--muted); font-size: 15px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 4px; margin-bottom: 8px; }
+  .tab { padding: 10px 6px; border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--muted); }
+  .tab.on { background: var(--accent); color: var(--accent-ink); }
+  .zoek-info { color: var(--muted); font-size: 13px; margin: -6px 2px 10px; }
+  ul.results { margin-bottom: 16px; }
+  ul.results li { cursor: pointer; padding: 12px 16px; }
+  ul.results li:active { background: var(--soft); }
+  ul.results .nm { flex: 1; min-width: 0; }
+  ul.results .nm small { display: block; color: var(--muted); font-size: 13px; }
+  ul.results .plus { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 20px; line-height: 34px; text-align: center; flex: none; }
+  ul.results li.added .plus { background: var(--soft); color: var(--accent); }
+  .mylist-title { font-size: 15px; color: var(--muted); font-weight: 600; margin: 8px 2px 8px; text-transform: uppercase; letter-spacing: .04em; }
+  .overview .kot li .pr { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .overview .kot .tot { display: flex; justify-content: space-between; border-top: 2px solid var(--ink); margin-top: 4px; padding-top: 8px; font-weight: 700; }
+  .overview .kot .tot small { font-weight: 400; color: var(--muted); }
   .empty { text-align: center; color: var(--muted); padding: 36px 16px; background: var(--card); border: 1px dashed var(--line); border-radius: 18px; }
   .status { color: var(--muted); font-size: 14px; text-align: center; margin: 12px 0; min-height: 20px; }
   .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
@@ -100,6 +116,7 @@
     html, body { background: #fff; color: #000; font-size: 12pt; }
     main { max-width: none; padding: 0; }
     .top, .admin-actions, .clear, .no-print { display: none !important; }
+    .overview .kot .tot { border-color: #000; }
     .print-head { display: block; margin-bottom: 10pt; }
     .print-head h1 { font-size: 20pt; margin: 0; }
     .overview { columns: 2; column-gap: 10mm; }
@@ -134,10 +151,22 @@
   <!-- LIJST VAN EEN STUDENT -->
   <section id="s-list" class="hidden">
     <div class="top"><button class="back" data-back>‹</button><h2 id="list-title"></h2></div>
+    <div class="tabs" role="tablist">
+      <button class="tab on" data-tab="typen" role="tab">✏️ Zelf typen</button>
+      <button class="tab" data-tab="zoeken" role="tab">🔍 Zoek bij Colruyt</button>
+    </div>
     <form class="add" id="add-form" autocomplete="off">
       <input id="add-input" placeholder="Bv. 2 l melk" enterkeyhint="done" maxlength="120">
       <button type="submit">Voeg toe</button>
     </form>
+    <div id="zoek-panel" class="hidden">
+      <div class="add">
+        <input id="zoek-input" type="search" placeholder="Bv. halfvolle melk" enterkeyhint="search" maxlength="60" autocomplete="off">
+      </div>
+      <div class="zoek-info" id="zoek-info"></div>
+      <ul class="items results hidden" id="results"></ul>
+    </div>
+    <h3 class="mylist-title">Mijn lijst</h3>
     <ul class="items" id="items"></ul>
     <div class="empty hidden" id="empty">Je lijst is nog leeg.<br>Typ hierboven wat je nodig hebt.</div>
     <div class="status" id="status"></div>
@@ -231,7 +260,7 @@
         state.code = state.pin; renderAdmin(j.lijsten); show('s-admin');
       } else {
         const j = await api({ actie: 'openen', kot: state.kot, code: state.pin });
-        state.code = state.pin; state.items = j.items; openList();
+        state.code = state.pin; state.items = j.items; state.producten = j.producten || null; openList();
       }
     } catch (err) {
       $('pin-msg').style.color = 'var(--danger)'; $('pin-msg').textContent = err.message;
@@ -242,15 +271,16 @@
   // Lijst van student
   function openList() {
     $('list-title').textContent = KOTS.find(k => k.id === state.kot).naam;
-    $('status').textContent = ''; renderItems(); show('s-list');
+    $('status').textContent = ''; setTab('typen'); renderItems(); show('s-list');
   }
+  const euro = p => '€ ' + Number(p).toFixed(2).replace('.', ',');
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const MAG_WEG = 15 * 60 * 1000; // tikfout weghalen kan 15 minuten
   function renderItems() {
     const nu = Date.now();
     $('items').innerHTML = state.items.map(it =>
-      `<li><span class="t"></span>${it.tijd && nu - it.tijd < MAG_WEG
-        ? `<button class="del" data-id="${it.id}" aria-label="Weghalen">✕</button>` : ''}</li>`).join('');
-    [...$('items').querySelectorAll('.t')].forEach((el, i) => el.textContent = state.items[i].t);
+      `<li><span class="t">${esc(it.t)}</span>${it.p ? `<span class="pr">${euro(it.p)}</span>` : ''}${it.tijd && nu - it.tijd < MAG_WEG
+        ? `<button class="del" data-id="${esc(it.id)}" aria-label="Weghalen">✕</button>` : ''}</li>`).join('');
     $('items').classList.toggle('hidden', !state.items.length);
     $('empty').classList.toggle('hidden', !!state.items.length);
   }
@@ -271,6 +301,54 @@
     const b = e.target.closest('.del'); if (!b) return;
     b.disabled = true;
     send({ actie: 'verwijderen', id: b.dataset.id });
+  };
+
+  // Tabbladen: zelf typen of zoeken bij Colruyt
+  function setTab(t) {
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+    $('add-form').classList.toggle('hidden', t !== 'typen');
+    $('zoek-panel').classList.toggle('hidden', t !== 'zoeken');
+    if (t === 'zoeken') {
+      const pi = state.producten;
+      $('zoek-info').textContent = pi
+        ? `${pi.aantal.toLocaleString('nl-BE')} producten · prijzen van ${pi.datum.split('-').reverse().join('/')} (richtprijs)`
+        : 'De productlijst is nog niet opgehaald. Typ je product dan zelf in.';
+      $('zoek-input').value = ''; $('results').innerHTML = ''; $('results').classList.add('hidden');
+      setTimeout(() => $('zoek-input').focus(), 50);
+    }
+  }
+  document.querySelector('.tabs').onclick = e => { const b = e.target.closest('.tab'); if (b) setTab(b.dataset.tab); };
+
+  let zoekTimer = null, zoekNr = 0, laatsteResultaten = [];
+  $('zoek-input').oninput = () => {
+    clearTimeout(zoekTimer);
+    const q = $('zoek-input').value.trim();
+    if (q.length < 2) { $('results').classList.add('hidden'); return; }
+    zoekTimer = setTimeout(() => zoek(q), 400);
+  };
+  $('zoek-input').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(zoekTimer); zoek($('zoek-input').value.trim()); } };
+  async function zoek(q) {
+    if (q.length < 2) return;
+    const nr = ++zoekNr;
+    $('results').classList.remove('hidden');
+    $('results').innerHTML = '<li><span class="nm">Zoeken…</span></li>';
+    try {
+      const j = await api({ actie: 'zoek', kot: state.kot, code: state.code, q });
+      if (nr !== zoekNr) return;
+      laatsteResultaten = j.resultaten;
+      $('results').innerHTML = j.resultaten.length
+        ? j.resultaten.map((r, i) => `<li data-i="${i}"><span class="nm">${esc(r.n)}<small>${esc([r.m, r.c].filter(Boolean).join(' · '))}</small></span>${r.p ? `<span class="pr">${euro(r.p)}</span>` : ''}<span class="plus">+</span></li>`).join('')
+        : '<li><span class="nm">Niets gevonden. Probeer een ander woord, of typ het zelf in via ✏️.</span></li>';
+    } catch (err) {
+      if (nr === zoekNr) $('results').innerHTML = `<li><span class="nm">⚠️ ${esc(err.message)}</span></li>`;
+    }
+  }
+  $('results').onclick = e => {
+    const li = e.target.closest('li[data-i]'); if (!li) return;
+    const r = laatsteResultaten[Number(li.dataset.i)]; if (!r) return;
+    const t = [r.n, r.c].filter(Boolean).join(' – ').slice(0, 120);
+    send({ actie: 'toevoegen', t, p: r.p || undefined });
+    li.classList.add('added'); li.querySelector('.plus').textContent = '✓';
   };
 
   // Code wijzigen
@@ -304,7 +382,18 @@
         ${l.items.length ? `<button class="btn danger clear" data-kot="${k.id}">Lijst leegmaken (gekocht)</button>` : ''}`;
       const ol = div.querySelector('ol');
       if (!l.items.length) ol.innerHTML = '<li class="none">Niets nodig</li>';
-      l.items.forEach(it => { const li = document.createElement('li'); li.innerHTML = '<span class="box"></span><span></span>'; li.lastChild.textContent = it.t; ol.appendChild(li); });
+      let totaal = 0, zonder = 0;
+      l.items.forEach(it => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="box"></span><span>${esc(it.t)}</span>${it.p ? `<span class="pr">${euro(it.p)}</span>` : ''}`;
+        ol.appendChild(li);
+        if (it.p) totaal += it.p; else zonder++;
+      });
+      if (l.items.length && totaal) {
+        const tot = document.createElement('div'); tot.className = 'tot';
+        tot.innerHTML = `<span>Richtprijs${zonder ? ` <small>(+ ${zonder} zonder prijs)</small>` : ''}</span><span>${euro(totaal)}</span>`;
+        ol.after(tot);
+      }
       $('overview').appendChild(div);
     });
   }
